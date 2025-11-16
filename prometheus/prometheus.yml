@@ -1,0 +1,101 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'sync-microservices-monitor'
+
+scrape_configs:
+  # cAdvisor - Container metrics (CPU, Memory, Network, etc.)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # UserService metrics
+  - job_name: 'userservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['userservice:8000']
+        labels:
+          service: 'userservice'
+          scenario: 'scenario1'
+
+  # EmailService metrics
+  - job_name: 'emailservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['emailservice:8000']
+        labels:
+          service: 'emailservice'
+          scenario: 'scenario1'
+
+  # PaymentService metrics
+  - job_name: 'paymentservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['paymentservice:8000']
+        labels:
+          service: 'paymentservice'
+          scenario: 'scenario2'
+
+  # ProductService metrics
+  - job_name: 'productservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['productservice:8000']
+        labels:
+          service: 'productservice'
+          scenario: 'scenario3'
+
+  # SearchService metrics
+  - job_name: 'searchservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['searchservice:8000']
+        labels:
+          service: 'searchservice'
+          scenario: 'scenario3'
+
+  # CacheService metrics
+  - job_name: 'cacheservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['cacheservice:8000']
+        labels:
+          service: 'cacheservice'
+          scenario: 'scenario3'
+
+  # AnalyticsService metrics
+  - job_name: 'analyticsservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['analyticsservice:8000']
+        labels:
+          service: 'analyticsservice'
+          scenario: 'scenario3,scenario6'
+
+  # ReportService metrics
+  - job_name: 'reportservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['reportservice:8000']
+        labels:
+          service: 'reportservice'
+          scenario: 'scenario4'
+
+  # OrderService metrics
+  - job_name: 'orderservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['orderservice:8000']
+        labels:
+          service: 'orderservice'
+          scenario: 'scenario5'
+
+  # InventoryService metrics
+  - job_name: 'inventoryservice'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['inventoryservice:8000']
+        labels:
+          service: 'inventoryservice'
+          scenario: 'scenario5'
