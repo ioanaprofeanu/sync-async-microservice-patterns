@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_sync
+    environment:
+      POSTGRES_DB: microservices_db
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d microservices_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sync-network
+
+  userservice:
+    build: ./userservice
+    container_name: userservice_sync
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql://dbuser:dbpass@postgres:5432/microservices_db
+      EMAIL_SERVICE_URL: http://emailservice:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      emailservice:
+        condition: service_started
+    networks:
+      - sync-network
+
+  emailservice:
+    build: ./emailservice
+    container_name: emailservice_sync
+    ports:
+      - "8007:8000"
+    networks:
+      - sync-network
+
+  paymentservice:
+    build: ./paymentservice
+    container_name: paymentservice_sync
+    ports:
+      - "8002:8000"
+    networks:
+      - sync-network
+
+  productservice:
+    build: ./productservice
+    container_name: productservice_sync
+    ports:
+      - "8003:8000"
+    environment:
+      DATABASE_URL: postgresql://dbuser:dbpass@postgres:5432/microservices_db
+      SEARCH_SERVICE_URL: http://searchservice:8000
+      CACHE_SERVICE_URL: http://cacheservice:8000
+      ANALYTICS_SERVICE_URL: http://analyticsservice:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      searchservice:
+        condition: service_started
+      cacheservice:
+        condition: service_started
+      analyticsservice:
+        condition: service_started
+    networks:
+      - sync-network
+
+  searchservice:
+    build: ./searchservice
+    container_name: searchservice_sync
+    ports:
+      - "8008:8000"
+    networks:
+      - sync-network
+
+  cacheservice:
+    build: ./cacheservice
+    container_name: cacheservice_sync
+    ports:
+      - "8009:8000"
+    networks:
+      - sync-network
+
+  analyticsservice:
+    build: ./analyticsservice
+    container_name: analyticsservice_sync
+    ports:
+      - "8006:8000"
+    networks:
+      - sync-network
+
+  reportservice:
+    build: ./reportservice
+    container_name: reportservice_sync
+    ports:
+      - "8004:8000"
+    networks:
+      - sync-network
+
+  orderservice:
+    build: ./orderservice
+    container_name: orderservice_sync
+    ports:
+      - "8005:8000"
+    environment:
+      DATABASE_URL: postgresql://dbuser:dbpass@postgres:5432/microservices_db
+      INVENTORY_SERVICE_URL: http://inventoryservice:8000
+      PAYMENT_SERVICE_URL: http://paymentservice:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventoryservice:
+        condition: service_started
+      paymentservice:
+        condition: service_started
+    networks:
+      - sync-network
+
+  inventoryservice:
+    build: ./inventoryservice
+    container_name: inventoryservice_sync
+    ports:
+      - "8010:8000"
+    environment:
+      DATABASE_URL: postgresql://dbuser:dbpass@postgres:5432/microservices_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sync-network
+
+networks:
+  sync-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
