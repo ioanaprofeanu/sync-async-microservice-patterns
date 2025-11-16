@@ -4,6 +4,7 @@ import logging
 import hashlib
 import time
 from datetime import datetime
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Configure logging
 logging.basicConfig(
@@ -13,6 +14,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ReportService", version="1.0.0")
+
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 
 class ReportRequest(BaseModel):

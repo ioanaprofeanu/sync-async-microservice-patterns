@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import logging
 from datetime import datetime
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Configure logging
 logging.basicConfig(
@@ -11,6 +12,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AnalyticsService", version="1.0.0")
+
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 
 class LogUpdateRequest(BaseModel):

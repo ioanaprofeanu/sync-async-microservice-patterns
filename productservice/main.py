@@ -7,6 +7,7 @@ import requests
 import logging
 import os
 from datetime import datetime
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Configure logging
 logging.basicConfig(
@@ -16,6 +17,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ProductService", version="1.0.0")
+
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://dbuser:dbpass@postgres:5432/microservices_db")
