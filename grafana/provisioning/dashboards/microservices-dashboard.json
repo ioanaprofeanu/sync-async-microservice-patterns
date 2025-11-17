@@ -344,7 +344,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"userservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"userservice\"}[1m]))",
           "legendFormat": "UserService",
           "refId": "A"
         },
@@ -353,7 +353,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"emailservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"emailservice\"}[1m]))",
           "legendFormat": "EmailService",
           "refId": "B"
         },
@@ -362,7 +362,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"paymentservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"paymentservice\"}[1m]))",
           "legendFormat": "PaymentService",
           "refId": "C"
         },
@@ -371,7 +371,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"productservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"productservice\"}[1m]))",
           "legendFormat": "ProductService",
           "refId": "D"
         },
@@ -380,7 +380,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"searchservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"searchservice\"}[1m]))",
           "legendFormat": "SearchService",
           "refId": "E"
         },
@@ -389,7 +389,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"cacheservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"cacheservice\"}[1m]))",
           "legendFormat": "CacheService",
           "refId": "F"
         },
@@ -398,7 +398,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"analyticsservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"analyticsservice\"}[1m]))",
           "legendFormat": "AnalyticsService",
           "refId": "G"
         },
@@ -407,7 +407,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"reportservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"reportservice\"}[1m]))",
           "legendFormat": "ReportService",
           "refId": "H"
         },
@@ -416,7 +416,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"orderservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"orderservice\"}[1m]))",
           "legendFormat": "OrderService",
           "refId": "I"
         },
@@ -425,7 +425,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"inventoryservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"inventoryservice\"}[1m]))",
           "legendFormat": "InventoryService",
           "refId": "J"
         }
@@ -1200,7 +1200,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"productservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"productservice\"}[1m]))",
           "legendFormat": "ProductService",
           "refId": "A"
         },
@@ -1209,7 +1209,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"searchservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"searchservice\"}[1m]))",
           "legendFormat": "SearchService",
           "refId": "B"
         },
@@ -1218,7 +1218,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"cacheservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"cacheservice\"}[1m]))",
           "legendFormat": "CacheService",
           "refId": "C"
         }
@@ -1396,7 +1396,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"orderservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"orderservice\"}[1m]))",
           "legendFormat": "OrderService",
           "refId": "A"
         },
@@ -1405,7 +1405,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"inventoryservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"inventoryservice\"}[1m]))",
           "legendFormat": "InventoryService",
           "refId": "B"
         }
@@ -1500,7 +1500,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(http_requests_total{job=\"analyticsservice\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"analyticsservice\"}[1m]))",
           "legendFormat": "AnalyticsService (S6: High Throughput)",
           "refId": "A"
         }
