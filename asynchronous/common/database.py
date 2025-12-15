@@ -5,6 +5,7 @@ Shared across all services that use PostgreSQL.
 
 import os
 import logging
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
@@ -63,9 +64,10 @@ class DatabaseManager:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created")
 
+    @asynccontextmanager
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """
-        Get async database session (context manager).
+        Get async database session (async context manager).
 
         Usage:
             async with db_manager.get_session() as session:
@@ -119,5 +121,5 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     if _db_manager is None:
         raise RuntimeError("Database manager not initialized. Call set_db_manager() during startup.")
 
-    async for session in _db_manager.get_session():
+    async with _db_manager.get_session() as session:
         yield session

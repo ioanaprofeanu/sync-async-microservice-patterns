@@ -16,6 +16,7 @@ from fastapi import FastAPI
 from sqlalchemy import Column, Integer, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_fastapi_instrumentator import Instrumentator
+from aio_pika import ExchangeType
 
 from database import DatabaseManager, Base
 from rabbitmq_client import RabbitMQClient
@@ -34,6 +35,11 @@ logger = logging.getLogger(__name__)
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
 RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
+
+# Fanout exchange for PaymentFailed events
+PAYMENT_FAILED_EXCHANGE = "payment_failed"
+# This service's dedicated queue for payment failed events
+INVENTORY_PAYMENT_FAILED_QUEUE = "inventory_payment_failed_queue"
 
 rabbitmq_client: RabbitMQClient = None
 db_manager: DatabaseManager = None
@@ -155,7 +161,7 @@ async def start_order_created_consumer():
 async def start_payment_failed_consumer():
     """Start consumer for PaymentFailed events (compensation)"""
     consumer = BaseConsumer(
-        queue_name="payment_failed_queue",
+        queue_name=INVENTORY_PAYMENT_FAILED_QUEUE,
         rabbitmq_client=rabbitmq_client
     )
     logger.info("InventoryService compensation consumer started (PaymentFailed)")
@@ -186,8 +192,21 @@ async def lifespan(app: FastAPI):
     # Declare queues
     await rabbitmq_client.declare_queue("order_created_queue", durable=True)
     await rabbitmq_client.declare_queue("stock_reserved_queue", durable=True)
-    await rabbitmq_client.declare_queue("payment_failed_queue", durable=True)
     await rabbitmq_client.declare_queue("stock_released_queue", durable=True)
+
+    # Declare fanout exchange for PaymentFailed events and bind our dedicated queue
+    await rabbitmq_client.declare_exchange(
+        PAYMENT_FAILED_EXCHANGE,
+        ExchangeType.FANOUT,
+        durable=True
+    )
+    await rabbitmq_client.declare_queue(INVENTORY_PAYMENT_FAILED_QUEUE, durable=True)
+    await rabbitmq_client.bind_queue_to_exchange(
+        INVENTORY_PAYMENT_FAILED_QUEUE,
+        PAYMENT_FAILED_EXCHANGE,
+        routing_key=""
+    )
+    logger.info(f"Queue '{INVENTORY_PAYMENT_FAILED_QUEUE}' bound to '{PAYMENT_FAILED_EXCHANGE}' exchange")
 
     # Start consumers
     consumer_tasks.append(asyncio.create_task(start_order_created_consumer()))

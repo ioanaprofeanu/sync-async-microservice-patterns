@@ -78,6 +78,20 @@ class ProductResponse(BaseModel):
 
 # ==================== Lifecycle Management ====================
 
+async def seed_products():
+    """Seed initial products if they don't exist (for testing)"""
+    async with db_manager.get_session() as db:
+        for product_id in range(1, 4):  # Products 1-3
+            result = await db.execute(
+                select(Product).where(Product.id == product_id)
+            )
+            if result.scalar_one_or_none() is None:
+                product = Product(id=product_id, name=f"Product {product_id}", stock=100)
+                db.add(product)
+                logger.info(f"Seeded product {product_id}")
+        await db.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
@@ -90,6 +104,9 @@ async def lifespan(app: FastAPI):
     db_manager = DatabaseManager()
     set_db_manager(db_manager)  # Set global instance for get_db() dependency
     await db_manager.create_tables()
+
+    # Seed products for testing
+    await seed_products()
 
     # Initialize RabbitMQ
     rabbitmq_client = RabbitMQClient(

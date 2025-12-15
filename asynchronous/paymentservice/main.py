@@ -18,6 +18,7 @@ sys.path.append('/app/common')
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
+from aio_pika import ExchangeType
 
 from rabbitmq_client import RabbitMQClient
 from event_schemas import (
@@ -37,6 +38,9 @@ logger = logging.getLogger(__name__)
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
 RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
+
+# Fanout exchange for PaymentFailed events (multiple consumers need to receive)
+PAYMENT_FAILED_EXCHANGE = "payment_failed"
 
 # Global variables
 rabbitmq_client: RabbitMQClient = None
@@ -119,7 +123,7 @@ async def process_stock_reserved(message_body: str, message) -> None:
         # SIMULATE PAYMENT FAILURE (as per Scenario 5 requirements)
         logger.warning(f"⚠️ Payment FAILED for order {event.order_id} (simulated failure)")
 
-        # Publish PaymentFailed event to trigger saga compensation
+        # Publish PaymentFailed event to fanout exchange (both OrderService and InventoryService need it)
         failed_event = PaymentFailedEvent(
             order_id=event.order_id,
             reason="Insufficient funds (simulated failure for saga demonstration)",
@@ -127,9 +131,10 @@ async def process_stock_reserved(message_body: str, message) -> None:
         )
 
         await rabbitmq_client.publish_message(
-            exchange_name="",
-            routing_key="payment_failed_queue",
-            message_body=event_to_json(failed_event)
+            exchange_name=PAYMENT_FAILED_EXCHANGE,
+            routing_key="",  # Empty routing key for fanout
+            message_body=event_to_json(failed_event),
+            exchange_type=ExchangeType.FANOUT
         )
 
         logger.info(f"PaymentFailed event published for order {event.order_id}")
@@ -190,8 +195,15 @@ async def lifespan(app: FastAPI):
     # Declare queues
     await rabbitmq_client.declare_queue("payment_initiated_queue", durable=True)
     await rabbitmq_client.declare_queue("payment_completed_queue", durable=True)
-    await rabbitmq_client.declare_queue("payment_failed_queue", durable=True)
     await rabbitmq_client.declare_queue("stock_reserved_queue", durable=True)
+
+    # Declare fanout exchange for PaymentFailed events (multiple consumers)
+    await rabbitmq_client.declare_exchange(
+        PAYMENT_FAILED_EXCHANGE,
+        ExchangeType.FANOUT,
+        durable=True
+    )
+    logger.info(f"Fanout exchange '{PAYMENT_FAILED_EXCHANGE}' declared")
 
     # Start consumers as background tasks
     consumer_tasks.append(asyncio.create_task(start_payment_consumer()))

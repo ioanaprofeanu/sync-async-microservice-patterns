@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_fastapi_instrumentator import Instrumentator
+from aio_pika import ExchangeType
 
 from database import DatabaseManager, Base, get_db, set_db_manager
 from rabbitmq_client import RabbitMQClient
@@ -32,6 +33,11 @@ logger = logging.getLogger(__name__)
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
 RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
+
+# Fanout exchange for PaymentFailed events
+PAYMENT_FAILED_EXCHANGE = "payment_failed"
+# This service's dedicated queue for payment failed events
+ORDER_PAYMENT_FAILED_QUEUE = "order_payment_failed_queue"
 
 rabbitmq_client: RabbitMQClient = None
 db_manager: DatabaseManager = None
@@ -101,7 +107,7 @@ async def start_consumer():
     global rabbitmq_client
 
     consumer = BaseConsumer(
-        queue_name="payment_failed_queue",
+        queue_name=ORDER_PAYMENT_FAILED_QUEUE,
         rabbitmq_client=rabbitmq_client
     )
 
@@ -133,7 +139,20 @@ async def lifespan(app: FastAPI):
 
     # Declare queues
     await rabbitmq_client.declare_queue("order_created_queue", durable=True)
-    await rabbitmq_client.declare_queue("payment_failed_queue", durable=True)
+
+    # Declare fanout exchange for PaymentFailed events and bind our dedicated queue
+    await rabbitmq_client.declare_exchange(
+        PAYMENT_FAILED_EXCHANGE,
+        ExchangeType.FANOUT,
+        durable=True
+    )
+    await rabbitmq_client.declare_queue(ORDER_PAYMENT_FAILED_QUEUE, durable=True)
+    await rabbitmq_client.bind_queue_to_exchange(
+        ORDER_PAYMENT_FAILED_QUEUE,
+        PAYMENT_FAILED_EXCHANGE,
+        routing_key=""
+    )
+    logger.info(f"Queue '{ORDER_PAYMENT_FAILED_QUEUE}' bound to '{PAYMENT_FAILED_EXCHANGE}' exchange")
 
     # Start consumer
     consumer_task = asyncio.create_task(start_consumer())
