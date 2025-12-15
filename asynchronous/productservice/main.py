@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_fastapi_instrumentator import Instrumentator
 from aio_pika import ExchangeType
 
-from database import DatabaseManager, Base
+from database import DatabaseManager, Base, get_db, set_db_manager
 from rabbitmq_client import RabbitMQClient
 from event_schemas import ProductUpdatedEvent, event_to_json
 
@@ -88,6 +88,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize database
     db_manager = DatabaseManager()
+    set_db_manager(db_manager)  # Set global instance for get_db() dependency
     await db_manager.create_tables()
 
     # Initialize RabbitMQ
@@ -128,14 +129,6 @@ app = FastAPI(
 Instrumentator().instrument(app).expose(app)
 
 
-# ==================== Dependencies ====================
-
-async def get_db_session() -> AsyncSession:
-    """Get database session"""
-    async with db_manager.get_session() as session:
-        yield session
-
-
 # ==================== API Endpoints ====================
 
 @app.get("/health")
@@ -165,7 +158,7 @@ async def root():
 @app.post("/products", status_code=201, response_model=ProductResponse)
 async def create_product(
     product: ProductCreate,
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new product"""
     new_product = Product(name=product.name, stock=product.stock)
@@ -186,7 +179,7 @@ async def create_product(
 async def update_product(
     product_id: int,
     product_update: ProductUpdate,
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Scenario 3: Fan-Out Flow (Async)
@@ -256,7 +249,7 @@ async def update_product(
 
 
 @app.get("/products/{product_id}", response_model=ProductResponse)
-async def get_product(product_id: int, db: AsyncSession = Depends(get_db_session)):
+async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
     """Get product by ID"""
     result = await db.execute(
         select(Product).where(Product.id == product_id)
@@ -274,7 +267,7 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db_session
 
 
 @app.get("/products")
-async def list_products(db: AsyncSession = Depends(get_db_session)):
+async def list_products(db: AsyncSession = Depends(get_db)):
     """List all products"""
     result = await db.execute(select(Product))
     products = result.scalars().all()

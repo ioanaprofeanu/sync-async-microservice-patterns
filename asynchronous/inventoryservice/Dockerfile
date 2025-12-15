@@ -2,11 +2,11 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY ../common /app/common
-COPY requirements.txt .
+COPY common /app/common
+COPY inventoryservice/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY inventoryservice/*.py .
 
 EXPOSE 8000
 

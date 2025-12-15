@@ -3,13 +3,13 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Copy common utilities
-COPY ../common /app/common
+COPY common /app/common
 
 # Copy service-specific files
-COPY requirements.txt .
+COPY userservice/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY userservice/*.py .
 
 # Expose FastAPI port
 EXPOSE 8000

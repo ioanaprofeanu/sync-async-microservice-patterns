@@ -18,7 +18,7 @@ from sqlalchemy import Column, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from database import DatabaseManager, Base
+from database import DatabaseManager, Base, get_db, set_db_manager
 from rabbitmq_client import RabbitMQClient
 from event_schemas import OrderCreatedEvent, PaymentFailedEvent, event_to_json, json_to_event
 from base_consumer import BaseConsumer
@@ -120,6 +120,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize database
     db_manager = DatabaseManager()
+    set_db_manager(db_manager)  # Set global instance for get_db() dependency
     await db_manager.create_tables()
 
     # Initialize RabbitMQ
@@ -164,14 +165,6 @@ app = FastAPI(
 Instrumentator().instrument(app).expose(app)
 
 
-# ==================== Dependencies ====================
-
-async def get_db_session() -> AsyncSession:
-    """Get database session"""
-    async with db_manager.get_session() as session:
-        yield session
-
-
 # ==================== API Endpoints ====================
 
 @app.get("/health")
@@ -198,7 +191,7 @@ async def root():
 @app.post("/create_order", status_code=202, response_model=OrderResponse)
 async def create_order(
     order_request: OrderRequest,
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Scenario 5: Choreography Saga Pattern (Async)
@@ -256,7 +249,7 @@ async def create_order(
 
 
 @app.get("/orders/{order_id}", response_model=OrderResponse)
-async def get_order(order_id: int, db: AsyncSession = Depends(get_db_session)):
+async def get_order(order_id: int, db: AsyncSession = Depends(get_db)):
     """Get order by ID (for verifying saga completion)"""
     result = await db.execute(
         select(Order).where(Order.id == order_id)

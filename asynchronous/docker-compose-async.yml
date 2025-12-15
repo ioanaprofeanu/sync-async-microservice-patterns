@@ -44,7 +44,9 @@ services:
 
   # Scenario 1: UserService (HTTP entry + Event Publisher)
   userservice:
-    build: ./userservice
+    build:
+      context: .
+      dockerfile: userservice/Dockerfile
     container_name: userservice_async
     ports:
       - "8101:8000"  # Different port range (81xx) for async
@@ -67,7 +69,9 @@ services:
 
   # Scenario 1: EmailService (Consumer Only)
   emailservice:
-    build: ./emailservice
+    build:
+      context: .
+      dockerfile: emailservice/Dockerfile
     container_name: emailservice_async
     ports:
       - "8107:8000"
@@ -84,7 +88,9 @@ services:
 
   # Scenario 2: PaymentService (HTTP + Self-Consumer)
   paymentservice:
-    build: ./paymentservice
+    build:
+      context: .
+      dockerfile: paymentservice/Dockerfile
     container_name: paymentservice_async
     ports:
       - "8102:8000"
@@ -101,7 +107,9 @@ services:
 
   # Scenario 3: ProductService (HTTP + Fanout Publisher)
   productservice:
-    build: ./productservice
+    build:
+      context: .
+      dockerfile: productservice/Dockerfile
     container_name: productservice_async
     ports:
       - "8103:8000"
@@ -124,7 +132,9 @@ services:
 
   # Scenario 3: SearchService (Fanout Consumer)
   searchservice:
-    build: ./searchservice
+    build:
+      context: .
+      dockerfile: searchservice/Dockerfile
     container_name: searchservice_async
     ports:
       - "8108:8000"
@@ -141,7 +151,9 @@ services:
 
   # Scenario 3: CacheService (Fanout Consumer)
   cacheservice:
-    build: ./cacheservice
+    build:
+      context: .
+      dockerfile: cacheservice/Dockerfile
     container_name: cacheservice_async
     ports:
       - "8109:8000"
@@ -158,7 +170,9 @@ services:
 
   # Scenario 3 & 6: AnalyticsService (Fanout Consumer + High-Throughput HTTP)
   analyticsservice:
-    build: ./analyticsservice
+    build:
+      context: .
+      dockerfile: analyticsservice/Dockerfile
     container_name: analyticsservice_async
     ports:
       - "8106:8000"
@@ -175,7 +189,9 @@ services:
 
   # Scenario 4: ReportService (HTTP + CPU Job Consumer)
   reportservice:
-    build: ./reportservice
+    build:
+      context: .
+      dockerfile: reportservice/Dockerfile
     container_name: reportservice_async
     ports:
       - "8104:8000"
@@ -192,7 +208,9 @@ services:
 
   # Scenario 5: OrderService (Saga Orchestrator)
   orderservice:
-    build: ./orderservice
+    build:
+      context: .
+      dockerfile: orderservice/Dockerfile
     container_name: orderservice_async
     ports:
       - "8105:8000"
@@ -215,7 +233,9 @@ services:
 
   # Scenario 5: InventoryService (Saga Participant)
   inventoryservice:
-    build: ./inventoryservice
+    build:
+      context: .
+      dockerfile: inventoryservice/Dockerfile
     container_name: inventoryservice_async
     ports:
       - "8110:8000"

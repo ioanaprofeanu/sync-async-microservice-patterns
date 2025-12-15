@@ -10,6 +10,7 @@ import os
 import sys
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -37,6 +38,7 @@ REPORT_QUEUE = "report_job_queue"
 
 rabbitmq_client: RabbitMQClient = None
 consumer_task: asyncio.Task = None
+thread_pool: ThreadPoolExecutor = None
 
 
 class ReportJobResponse(BaseModel):
@@ -46,24 +48,40 @@ class ReportJobResponse(BaseModel):
     message: str
 
 
+def cpu_intensive_hashing() -> str:
+    """
+    Synchronous CPU-intensive task that runs in a thread pool.
+    Performs 10 seconds of actual CPU work (SHA-256 hashing loop).
+
+    Returns:
+        Hex digest of the final hash
+    """
+    start_time = time.time()
+    text = b"compute_hash"
+
+    # CPU-intensive task: SHA-256 hashing for ~10 seconds
+    while (time.time() - start_time) < 10:
+        text = hashlib.sha256(text).digest()
+
+    return text.hex()
+
+
 async def process_report_job(message_body: str, message) -> None:
     """
     Process GenerateReportJob event with CPU-intensive task.
-    Performs 10 seconds of actual CPU work (SHA-256 hashing loop).
+    Runs the CPU work in a thread pool to avoid blocking the event loop.
     """
     try:
         event = json_to_event(message_body, GenerateReportJobEvent)
         logger.info(f"🔄 Processing report job {event.job_id} (type: {event.report_type})")
 
         start_time = time.time()
-        text = b"compute_hash"
 
-        # CPU-intensive task: SHA-256 hashing for ~10 seconds
-        while (time.time() - start_time) < 10:
-            text = hashlib.sha256(text).digest()
+        # Run CPU-intensive work in thread pool to avoid blocking event loop
+        loop = asyncio.get_event_loop()
+        report_hash = await loop.run_in_executor(thread_pool, cpu_intensive_hashing)
 
         duration = time.time() - start_time
-        report_hash = text.hex()
 
         logger.info(
             f"✓ Report job {event.job_id} completed in {duration:.2f}s. Hash: {report_hash[:16]}..."
@@ -100,14 +118,20 @@ async def start_consumer():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
-    global consumer_task
+    global consumer_task, thread_pool
 
     logger.info("Starting ReportService...")
+
+    # Initialize thread pool for CPU-intensive tasks
+    thread_pool = ThreadPoolExecutor(max_workers=4)
+
     consumer_task = asyncio.create_task(start_consumer())
 
     yield
 
     logger.info("Shutting down ReportService...")
+
+    # Cancel consumer task
     if consumer_task:
         consumer_task.cancel()
         try:
@@ -115,6 +139,11 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
+    # Shutdown thread pool
+    if thread_pool:
+        thread_pool.shutdown(wait=True)
+
+    # Disconnect RabbitMQ
     if rabbitmq_client:
         await rabbitmq_client.disconnect()
 

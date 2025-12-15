@@ -19,7 +19,7 @@ from sqlalchemy import Column, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from database import DatabaseManager, Base, get_db
+from database import DatabaseManager, Base, get_db, set_db_manager
 from rabbitmq_client import RabbitMQClient
 from event_schemas import UserRegisteredEvent, event_to_json
 
@@ -79,6 +79,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize database
     db_manager = DatabaseManager()
+    set_db_manager(db_manager)  # Set global instance for get_db() dependency
     await db_manager.create_tables()
     logger.info("Database tables created")
 
@@ -116,16 +117,6 @@ app = FastAPI(
 Instrumentator().instrument(app).expose(app)
 
 
-# ==================== Helper Functions ====================
-
-async def get_db_session() -> AsyncSession:
-    """
-    Dependency to get database session.
-    """
-    async with db_manager.get_session() as session:
-        yield session
-
-
 # ==================== API Endpoints ====================
 
 @app.get("/health")
@@ -159,7 +150,7 @@ async def root():
 @app.post("/register", status_code=202, response_model=UserResponse)
 async def register_user(
     user_data: UserRegistration,
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Scenario 1: Non-Critical Task Decoupling (Async)
@@ -225,7 +216,7 @@ async def register_user(
 
 
 @app.get("/users/{user_id}")
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db_session)):
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     """
     Get user by ID.
 
@@ -251,7 +242,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db_session)):
 
 
 @app.get("/users")
-async def list_users(db: AsyncSession = Depends(get_db_session)):
+async def list_users(db: AsyncSession = Depends(get_db)):
     """
     List all users.
 
