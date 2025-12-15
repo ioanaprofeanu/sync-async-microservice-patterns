@@ -93,18 +93,8 @@ async def process_report_job(message_body: str, message) -> None:
 
 
 async def start_consumer():
-    """Start consumer for report job queue"""
+    """Start consumer for report job queue (uses global rabbitmq_client)"""
     global rabbitmq_client
-
-    rabbitmq_client = RabbitMQClient(
-        host=RABBITMQ_HOST,
-        user=RABBITMQ_USER,
-        password=RABBITMQ_PASSWORD
-    )
-    await rabbitmq_client.connect()
-
-    # Declare queue
-    await rabbitmq_client.declare_queue(REPORT_QUEUE, durable=True)
 
     consumer = BaseConsumer(
         queue_name=REPORT_QUEUE,
@@ -118,14 +108,28 @@ async def start_consumer():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
-    global consumer_task, thread_pool
+    global rabbitmq_client, consumer_task, thread_pool
 
     logger.info("Starting ReportService...")
 
     # Initialize thread pool for CPU-intensive tasks
     thread_pool = ThreadPoolExecutor(max_workers=4)
 
+    # Initialize RabbitMQ connection (before starting consumer or accepting requests)
+    rabbitmq_client = RabbitMQClient(
+        host=RABBITMQ_HOST,
+        user=RABBITMQ_USER,
+        password=RABBITMQ_PASSWORD
+    )
+    await rabbitmq_client.connect()
+
+    # Declare queue
+    await rabbitmq_client.declare_queue(REPORT_QUEUE, durable=True)
+
+    # Start consumer as background task
     consumer_task = asyncio.create_task(start_consumer())
+
+    logger.info("ReportService initialized successfully")
 
     yield
 

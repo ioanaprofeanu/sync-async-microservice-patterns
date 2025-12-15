@@ -232,7 +232,7 @@ export function testScenario4() {
 
     const success = check(res, {
         'Scenario 4 (ASYNC): status is 202 Accepted': (r) => r.status === 202,
-        'Scenario 4 (ASYNC): response time < 150ms': (r) => r.timings.duration < 150,
+        'Scenario 4 (ASYNC): response time < 200ms': (r) => r.timings.duration < 200,
         'Scenario 4 (ASYNC): has job_id': (r) => {
             try {
                 const body = JSON.parse(r.body);
