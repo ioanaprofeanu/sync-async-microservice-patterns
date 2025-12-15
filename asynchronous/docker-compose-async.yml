@@ -1,0 +1,302 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (shared across services)
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_async
+    environment:
+      POSTGRES_DB: microservices_db
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpass
+    ports:
+      - "5433:5432"  # Different port to avoid conflict with sync version
+    volumes:
+      - postgres_data_async:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d microservices_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - async-network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_async
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"   # AMQP protocol
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 1: UserService (HTTP entry + Event Publisher)
+  userservice:
+    build: ./userservice
+    container_name: userservice_async
+    ports:
+      - "8101:8000"  # Different port range (81xx) for async
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpass
+      POSTGRES_DB: microservices_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 1: EmailService (Consumer Only)
+  emailservice:
+    build: ./emailservice
+    container_name: emailservice_async
+    ports:
+      - "8107:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 2: PaymentService (HTTP + Self-Consumer)
+  paymentservice:
+    build: ./paymentservice
+    container_name: paymentservice_async
+    ports:
+      - "8102:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 3: ProductService (HTTP + Fanout Publisher)
+  productservice:
+    build: ./productservice
+    container_name: productservice_async
+    ports:
+      - "8103:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpass
+      POSTGRES_DB: microservices_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 3: SearchService (Fanout Consumer)
+  searchservice:
+    build: ./searchservice
+    container_name: searchservice_async
+    ports:
+      - "8108:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 3: CacheService (Fanout Consumer)
+  cacheservice:
+    build: ./cacheservice
+    container_name: cacheservice_async
+    ports:
+      - "8109:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 3 & 6: AnalyticsService (Fanout Consumer + High-Throughput HTTP)
+  analyticsservice:
+    build: ./analyticsservice
+    container_name: analyticsservice_async
+    ports:
+      - "8106:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 4: ReportService (HTTP + CPU Job Consumer)
+  reportservice:
+    build: ./reportservice
+    container_name: reportservice_async
+    ports:
+      - "8104:8000"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 5: OrderService (Saga Orchestrator)
+  orderservice:
+    build: ./orderservice
+    container_name: orderservice_async
+    ports:
+      - "8105:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpass
+      POSTGRES_DB: microservices_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Scenario 5: InventoryService (Saga Participant)
+  inventoryservice:
+    build: ./inventoryservice
+    container_name: inventoryservice_async
+    ports:
+      - "8110:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpass
+      POSTGRES_DB: microservices_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus_async
+    ports:
+      - "9091:9090"  # Different port to avoid conflict
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data_async:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_async
+    ports:
+      - "3001:3000"  # Different port to avoid conflict
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data_async:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - async-network
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor_async
+    ports:
+      - "8081:8080"  # Different port to avoid conflict
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - async-network
+    restart: unless-stopped
+
+networks:
+  async-network:
+    driver: bridge
+
+volumes:
+  postgres_data_async:
+  rabbitmq_data:
+  prometheus_data_async:
+  grafana_data_async:
