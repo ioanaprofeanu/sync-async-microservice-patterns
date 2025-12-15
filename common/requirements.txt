@@ -1,0 +1,23 @@
+# Common dependencies for async microservices
+
+# FastAPI framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Pydantic for data validation
+pydantic==2.5.0
+pydantic[email]==2.5.0
+
+# RabbitMQ async client
+aio_pika==9.3.1
+
+# Async PostgreSQL database
+sqlalchemy[asyncio]==2.0.23
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# Prometheus metrics
+prometheus-fastapi-instrumentator==6.1.0
+
+# Python standard async libraries
+aiofiles==23.2.1
