@@ -1,0 +1,195 @@
+"""
+ReportService - Scenario 4: CPU-Intensive Task Offloading
+HTTP endpoint accepts report requests, consumer processes CPU-intensive hashing job.
+"""
+
+import asyncio
+import hashlib
+import logging
+import os
+import sys
+import time
+import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime
+
+sys.path.append('/app/common')
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
+
+from rabbitmq_client import RabbitMQClient
+from event_schemas import GenerateReportJobEvent, event_to_json, json_to_event
+from base_consumer import BaseConsumer
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
+RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
+RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
+
+REPORT_QUEUE = "report_job_queue"
+
+rabbitmq_client: RabbitMQClient = None
+consumer_task: asyncio.Task = None
+
+
+class ReportJobResponse(BaseModel):
+    """Response model for report job submission"""
+    job_id: str
+    status: str
+    message: str
+
+
+async def process_report_job(message_body: str, message) -> None:
+    """
+    Process GenerateReportJob event with CPU-intensive task.
+    Performs 10 seconds of actual CPU work (SHA-256 hashing loop).
+    """
+    try:
+        event = json_to_event(message_body, GenerateReportJobEvent)
+        logger.info(f"🔄 Processing report job {event.job_id} (type: {event.report_type})")
+
+        start_time = time.time()
+        text = b"compute_hash"
+
+        # CPU-intensive task: SHA-256 hashing for ~10 seconds
+        while (time.time() - start_time) < 10:
+            text = hashlib.sha256(text).digest()
+
+        duration = time.time() - start_time
+        report_hash = text.hex()
+
+        logger.info(
+            f"✓ Report job {event.job_id} completed in {duration:.2f}s. Hash: {report_hash[:16]}..."
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing report job: {e}")
+        raise
+
+
+async def start_consumer():
+    """Start consumer for report job queue"""
+    global rabbitmq_client
+
+    rabbitmq_client = RabbitMQClient(
+        host=RABBITMQ_HOST,
+        user=RABBITMQ_USER,
+        password=RABBITMQ_PASSWORD
+    )
+    await rabbitmq_client.connect()
+
+    # Declare queue
+    await rabbitmq_client.declare_queue(REPORT_QUEUE, durable=True)
+
+    consumer = BaseConsumer(
+        queue_name=REPORT_QUEUE,
+        rabbitmq_client=rabbitmq_client
+    )
+
+    logger.info("ReportService consumer started")
+    await consumer.start(process_report_job)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle"""
+    global consumer_task
+
+    logger.info("Starting ReportService...")
+    consumer_task = asyncio.create_task(start_consumer())
+
+    yield
+
+    logger.info("Shutting down ReportService...")
+    if consumer_task:
+        consumer_task.cancel()
+        try:
+            await consumer_task
+        except asyncio.CancelledError:
+            pass
+
+    if rabbitmq_client:
+        await rabbitmq_client.disconnect()
+
+
+app = FastAPI(
+    title="ReportService",
+    version="1.0.0",
+    description="Async report generation service (Scenario 4)",
+    lifespan=lifespan
+)
+
+Instrumentator().instrument(app).expose(app)
+
+
+@app.get("/health")
+async def health():
+    return {
+        "status": "healthy",
+        "service": "reportservice",
+        "architecture": "async",
+        "rabbitmq_connected": rabbitmq_client is not None and rabbitmq_client.connection is not None
+    }
+
+
+@app.get("/")
+async def root():
+    return {
+        "service": "ReportService",
+        "version": "1.0.0",
+        "architecture": "Event-Driven (Async)",
+        "scenario": "4 - CPU-Intensive Task Offloading",
+        "description": "Offloads CPU-intensive report generation to background worker"
+    }
+
+
+@app.post("/generate_report", status_code=202, response_model=ReportJobResponse)
+async def generate_report():
+    """
+    Scenario 4: CPU-Intensive Task Offloading (Async)
+
+    Accepts report generation request and offloads to background worker.
+    Returns 202 Accepted immediately with job ID.
+    """
+    try:
+        # Generate unique job ID
+        job_id = f"job_{uuid.uuid4().hex[:12]}"
+
+        logger.info(f"Received report generation request: {job_id}")
+
+        # Publish job to queue
+        event = GenerateReportJobEvent(
+            job_id=job_id,
+            report_type="performance_summary",
+            parameters={},
+            timestamp=datetime.utcnow()
+        )
+
+        await rabbitmq_client.publish_message(
+            exchange_name="",
+            routing_key=REPORT_QUEUE,
+            message_body=event_to_json(event)
+        )
+
+        logger.info(f"Report job {job_id} queued for processing")
+
+        return ReportJobResponse(
+            job_id=job_id,
+            status="queued",
+            message="Report generation job queued. Processing in background."
+        )
+
+    except Exception as e:
+        logger.error(f"Error queueing report job: {e}")
+        return ReportJobResponse(
+            job_id="",
+            status="error",
+            message=str(e)
+        )
