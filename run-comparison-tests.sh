@@ -89,9 +89,10 @@ check_services() {
 run_k6_test() {
     local arch=$1
     local output_file=$2
+    local arch_upper=$(echo "$arch" | tr '[:lower:]' '[:upper:]')
 
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${MAGENTA}Running ${arch^^} test...${NC}"
+    echo -e "${MAGENTA}Running ${arch_upper} test...${NC}"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
     local cmd="k6 run \
@@ -110,10 +111,10 @@ run_k6_test() {
     echo -e "${YELLOW}Command: ${cmd}${NC}\n"
 
     if eval "${cmd}"; then
-        echo -e "\n${GREEN}✓ ${arch^^} test completed successfully${NC}\n"
+        echo -e "\n${GREEN}✓ ${arch_upper} test completed successfully${NC}\n"
         return 0
     else
-        echo -e "\n${RED}✗ ${arch^^} test failed${NC}\n"
+        echo -e "\n${RED}✗ ${arch_upper} test failed${NC}\n"
         return 1
     fi
 }
