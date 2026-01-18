@@ -83,6 +83,10 @@ Table 1 presents the aggregate p95 latency measurements across all load profiles
 
 The asynchronous architecture demonstrated a **98.1% improvement** in overall p95 latency, reducing tail latencies from 346.40ms to 6.41ms on average. Notably, the improvement increased dramatically as load intensified, from 66.6% at baseline to 98.7% at medium load and above.
 
+![Figure 1: p95 Latency Comparison Across Load Levels](graphs/figure1_p95_latency_comparison.png)
+
+**Figure 1: p95 Latency Comparison Across Load Levels.** The asynchronous architecture (blue) demonstrates substantial p95 latency improvements over the synchronous architecture (red) across all load profiles, ranging from 66.6% at baseline to 98.7% under medium-to-stress loads. Error bars represent standard deviation across two experimental runs. Improvement percentages are displayed above the bars.
+
 ### Detailed Response Time Distributions
 
 Table 2 provides comprehensive latency statistics for the medium load profile, representative of production traffic patterns:
@@ -132,6 +136,10 @@ The asynchronous architecture avoids these issues through:
 - **Automatic retries**: Failed operations retry automatically (3 attempts) before dead-lettering
 - **Non-blocking I/O**: FastAPI's async/await allows handling thousands of concurrent operations without thread exhaustion
 
+![Figure 2: Error Rate Comparison Across Load Levels](graphs/figure2_error_rate_comparison.png)
+
+**Figure 2: Error Rate Comparison Across Load Levels.** The synchronous architecture (red) exhibits error rates increasing from 3.51% at baseline to 7.55% under stress load, while the asynchronous architecture (blue) maintains 0% error rate across all test scenarios. The orange dashed line indicates a 1% error rate threshold for reference. This represents a 100% reduction in request failures.
+
 ### Throughput Comparison
 
 Table 4 presents throughput measurements:
@@ -149,9 +157,17 @@ Table 4 presents throughput measurements:
 
 The asynchronous architecture consistently achieved **4-11% higher throughput** than the synchronous implementation, with the advantage increasing under heavier load. This demonstrates superior resource utilization through non-blocking I/O operations.
 
+![Figure 3: Throughput Comparison Across Load Levels](graphs/figure3_throughput_comparison.png)
+
+**Figure 3: Throughput Comparison Across Load Levels.** The asynchronous architecture (blue) consistently achieves 4-11% higher throughput than the synchronous architecture (red), with the advantage increasing under heavier loads. At stress levels, async processes 420.5 req/s compared to sync's 380.0 req/s, demonstrating superior resource utilization through non-blocking I/O. Improvement percentages are displayed above bars.
+
 ---
 
 ## Scenario-Specific Performance Analysis
+
+![Figure 4: Per-Scenario p95 Latency Comparison](graphs/figure4_scenario_comparison.png)
+
+**Figure 4: Per-Scenario p95 Latency Comparison (Aggregated Across All Load Levels).** Performance comparison across six microservice patterns. Asynchronous architecture (blue) shows strongest advantages in Payment Processing (+100%), User Registration (+98%), and Report Generation (+99%), while Click Tracking favors synchronous implementation (-50%). Note: y-axis uses logarithmic scale due to wide latency range. Improvement percentages indicate relative performance gain.
 
 ### Scenario 1: User Registration (Fire-and-Forget Pattern)
 
@@ -326,6 +342,14 @@ The p50-to-p95 ratio provides insight into distribution shape:
 
 A lower p50/p95 ratio indicates greater variance and a longer tail of slow requests. The synchronous architecture's **0.13% ratio** reveals extreme tail latency, while the async architecture's **17.7% ratio** demonstrates consistent performance.
 
+![Figure 6: The Median vs p95 Latency Paradox](graphs/figure6_median_vs_p95_paradox.png)
+
+**Figure 6: The Median vs p95 Latency Paradox.** Left panel shows synchronous architecture (red) achieving superior median latency (0.67-0.78ms) compared to asynchronous (blue, 1.10-1.50ms). Right panel reveals the paradox: at p95, asynchronous dramatically outperforms synchronous (6-7ms vs 500+ms). This demonstrates bimodal distribution in synchronous systems (fast successes vs slow timeouts) versus unimodal consistent performance in asynchronous systems.
+
+![Figure 8: Latency Distribution Comparison](graphs/figure8_distribution_comparison.png)
+
+**Figure 8: Latency Distribution Comparison - Medium Load (Bimodal vs Unimodal Distribution).** Box plot representation illustrating fundamentally different latency distributions. Synchronous architecture exhibits wide spread between p50 (0.67ms) and p95 (507ms), indicating bimodal distribution with fast-path successes and slow-path failures. Asynchronous architecture shows tight clustering (p50=1.14ms, p95=6.43ms), indicating consistent unimodal performance. The synchronous p50/p95 ratio of 0.13% compared to async's 17.7% demonstrates extreme tail latency in synchronous systems.
+
 ---
 
 ## Scalability Analysis: Graceful vs Catastrophic Degradation
@@ -349,6 +373,10 @@ To evaluate scalability characteristics, we analyzed how performance degraded as
 |-------------------------|-------------|---------------|---------------|
 | **Sync Error Rate**     | 3.51%       | 7.55%         | +4.04pp       |
 | **Async Error Rate**    | 0.00%       | 0.00%         | 0.00pp        |
+
+![Figure 5: Scalability Analysis - p95 Latency Growth Under Increasing Load](graphs/figure5_scalability_analysis.png)
+
+**Figure 5: Scalability Analysis - p95 Latency Growth Under Increasing Load.** As concurrent virtual users increase from 9 (baseline) to 130 (stress), the synchronous architecture (red) exhibits catastrophic non-linear degradation (16.99ms → 510.60ms, +2,904%), while the asynchronous architecture (blue) shows graceful linear degradation (5.67ms → 7.07ms, +25%). Key data points are annotated. This divergent scaling behavior indicates a saturation point in synchronous architecture around 43 concurrent users (medium load).
 
 ### Analysis: Two Distinct Scaling Patterns
 
@@ -416,6 +444,10 @@ This comparative study of synchronous versus asynchronous microservice architect
 4. **Scalability characteristics diverge fundamentally**: Synchronous architecture exhibited catastrophic non-linear degradation (2,904% latency increase), while asynchronous architecture showed graceful linear degradation (25% latency increase) under equivalent 15x load increases.
 
 5. **Scenario-specific performance varies by pattern type**: Fire-and-forget (98.0%), long-running (99.8%), and CPU-intensive (94.9%) operations showed strongest async advantages, while simple high-throughput operations (click tracking) favored synchronous implementation (-49.7%).
+
+![Figure 7: Performance Improvement Heatmap](graphs/figure7_improvement_heatmap.png)
+
+**Figure 7: Performance Improvement Heatmap (Async vs Sync).** Comprehensive visualization of asynchronous performance advantage across multiple metrics and load levels. Green cells indicate asynchronous superiority, red cells indicate synchronous advantage. The heatmap reveals that p95, average latency, and error rate show strongest async advantages (dark green), while median (p50) favors sync at lower loads (red). Throughput consistently favors async (light green). Percentages indicate relative improvement.
 
 ### Theoretical Implications
 
