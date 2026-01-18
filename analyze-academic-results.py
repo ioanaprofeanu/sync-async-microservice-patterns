@@ -41,8 +41,12 @@ def parse_k6_summary(summary_file: Path) -> Dict:
 def get_metric(summary: Dict, metric: str, stat: str = 'value') -> float:
     """Extract metric from summary."""
     try:
-        return summary.get('metrics', {}).get(metric, {}).get('values', {}).get(stat, 0)
-    except (KeyError, AttributeError):
+        metric_data = summary.get('metrics', {}).get(metric, {})
+        # Handle both value-only metrics and multi-stat metrics
+        if isinstance(metric_data, dict):
+            return metric_data.get(stat, 0)
+        return 0
+    except (KeyError, AttributeError, TypeError):
         return 0
 
 
@@ -86,7 +90,7 @@ def analyze_test_results(results_dir: Path) -> Dict:
                 'throughput': get_metric(summary, 'http_reqs', 'rate'),
                 'total_requests': get_metric(summary, 'http_reqs', 'count'),
                 'iterations': get_metric(summary, 'iterations', 'count'),
-                'error_rate': get_metric(summary, 'error_rate', 'rate') * 100,
+                'error_rate': get_metric(summary, 'http_req_failed', 'value') * 100,
             }
 
             # Scenario-specific metrics
