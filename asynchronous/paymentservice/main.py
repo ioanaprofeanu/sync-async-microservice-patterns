@@ -144,6 +144,26 @@ async def process_stock_reserved(message_body: str, message) -> None:
         raise
 
 
+async def process_payment_completed(message_body: str, message) -> None:
+    """
+    Process PaymentCompleted event for audit/logging purposes.
+    This consumer prevents messages from accumulating in the queue.
+
+    Args:
+        message_body: JSON string of PaymentCompletedEvent
+        message: RabbitMQ message object
+    """
+    try:
+        event = json_to_event(message_body, PaymentCompletedEvent)
+        logger.info(
+            f"📊 Audit: Payment {event.payment_id} completed "
+            f"(txn: {event.transaction_id}, status: {event.status})"
+        )
+    except Exception as e:
+        logger.error(f"Error processing PaymentCompleted event: {e}")
+        raise
+
+
 # ==================== Consumers ====================
 
 async def start_payment_consumer():
@@ -170,6 +190,19 @@ async def start_saga_consumer():
     )
     logger.info("Starting StockReserved consumer (Saga)...")
     await consumer.start(process_stock_reserved)
+
+
+async def start_payment_completed_consumer():
+    """
+    Start consumer for PaymentCompleted events (audit/logging).
+    """
+    consumer = BaseConsumer(
+        queue_name="payment_completed_queue",
+        rabbitmq_client=rabbitmq_client,
+        max_retries=3
+    )
+    logger.info("Starting PaymentCompleted consumer (audit)...")
+    await consumer.start(process_payment_completed)
 
 
 # ==================== Lifecycle Management ====================
@@ -208,6 +241,7 @@ async def lifespan(app: FastAPI):
     # Start consumers as background tasks
     consumer_tasks.append(asyncio.create_task(start_payment_consumer()))
     consumer_tasks.append(asyncio.create_task(start_saga_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_payment_completed_consumer()))
 
     logger.info("PaymentService started successfully")
 

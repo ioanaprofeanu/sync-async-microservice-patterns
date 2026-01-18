@@ -148,6 +148,26 @@ async def process_payment_failed(message_body: str, message) -> None:
         raise
 
 
+async def process_stock_released(message_body: str, message) -> None:
+    """
+    Process StockReleased event for audit/logging purposes.
+    This consumer prevents messages from accumulating in the queue.
+
+    Args:
+        message_body: JSON string of StockReleasedEvent
+        message: RabbitMQ message object
+    """
+    try:
+        event = json_to_event(message_body, StockReleasedEvent)
+        logger.info(
+            f"📊 Audit: Stock released for order {event.order_id} "
+            f"(product: {event.product_id}, qty: {event.quantity}, reason: {event.reason})"
+        )
+    except Exception as e:
+        logger.error(f"Error processing StockReleased event: {e}")
+        raise
+
+
 async def start_order_created_consumer():
     """Start consumer for OrderCreated events"""
     consumer = BaseConsumer(
@@ -166,6 +186,16 @@ async def start_payment_failed_consumer():
     )
     logger.info("InventoryService compensation consumer started (PaymentFailed)")
     await consumer.start(process_payment_failed)
+
+
+async def start_stock_released_consumer():
+    """Start consumer for StockReleased events (audit/logging)"""
+    consumer = BaseConsumer(
+        queue_name="stock_released_queue",
+        rabbitmq_client=rabbitmq_client
+    )
+    logger.info("InventoryService audit consumer started (StockReleased)")
+    await consumer.start(process_stock_released)
 
 
 # ==================== Lifecycle Management ====================
@@ -211,6 +241,7 @@ async def lifespan(app: FastAPI):
     # Start consumers
     consumer_tasks.append(asyncio.create_task(start_order_created_consumer()))
     consumer_tasks.append(asyncio.create_task(start_payment_failed_consumer()))
+    consumer_tasks.append(asyncio.create_task(start_stock_released_consumer()))
 
     yield
 
