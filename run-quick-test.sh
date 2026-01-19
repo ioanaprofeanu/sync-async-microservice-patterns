@@ -1,11 +1,10 @@
 #!/bin/bash
 
 ################################################################################
-# Quick Academic Performance Testing Suite (1 Hour)
+# Quick Performance Testing Suite (1 Hour)
 # Optimized for time-constrained comprehensive analysis
 #
-# Usage:
-#   ./run-quick-academic-tests.sh
+# 
 #
 # Duration: ~58 minutes
 # Runs: 2 per configuration
@@ -25,13 +24,13 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Configuration
-RESULTS_DIR="academic-results/quick_$(date +"%Y%m%d_%H%M%S")"
+RESULTS_DIR="results/quick_$(date +"%Y%m%d_%H%M%S")"
 mkdir -p "${RESULTS_DIR}"
 
 echo -e "${CYAN}${BOLD}"
 cat << "EOF"
 ╔══════════════════════════════════════════════════════════════════╗
-║         QUICK ACADEMIC PERFORMANCE TEST SUITE (1 HOUR)          ║
+║         QUICK PERFORMANCE TEST SUITE (1 HOUR)          ║
 ║        Comprehensive Sync vs Async Analysis in 58 Minutes       ║
 ╚══════════════════════════════════════════════════════════════════╝
 EOF
@@ -235,5 +234,5 @@ cat > "${RESULTS_DIR}/metadata.json" << EOF
 EOF
 
 echo -e "${YELLOW}Next steps:${NC}"
-echo -e "${BLUE}1. Analyze results: python3 analyze-academic-results.py ${RESULTS_DIR}${NC}"
+echo -e "${BLUE}1. Analyze results: python3 analyze-results.py ${RESULTS_DIR}${NC}"
 echo -e "${BLUE}2. Generate report: The analysis script will create comparison tables${NC}\n"

@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """
-Academic Results Analysis Tool
-
-Analyzes performance test results and generates comprehensive academic-quality
-reports including statistical analysis, comparison tables, and recommendations.
+Results Analysis Tool
 
 Usage:
-    python3 analyze-academic-results.py <results_directory>
+    python3 analyze-results.py <results_directory>
 """
 
 import json
@@ -245,7 +242,6 @@ def generate_scenario_analysis(results: Dict):
 
 def generate_recommendations(results: Dict):
     """Generate recommendations."""
-    print_header("RECOMMENDATIONS FOR ACADEMIC PAPER")
 
     recommendations = []
 
