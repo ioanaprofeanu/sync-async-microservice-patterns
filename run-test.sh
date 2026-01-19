@@ -1,15 +1,15 @@
 #!/bin/bash
 
 ################################################################################
-# Academic Performance Testing Suite
+# Performance Testing Suite
 # Comprehensive test runner for research paper analysis
 #
 # Usage:
-#   ./run-academic-tests.sh [phase]
+#   ./run-tests.sh [phase]
 #
 # Phases:
 #   quick     - Quick validation (2 hours)
-#   standard  - Standard academic suite (12 hours)
+#   standard  - Standard suite (12 hours)
 #   full      - Full comprehensive suite (20+ hours)
 #   custom    - Run specific test configurations
 ################################################################################
@@ -28,7 +28,7 @@ NC='\033[0m'
 
 # Configuration
 PHASE="${1:-standard}"
-RESULTS_BASE="academic-results"
+RESULTS_BASE="results"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 RESULTS_DIR="${RESULTS_BASE}/${PHASE}_${TIMESTAMP}"
 
@@ -37,7 +37,7 @@ mkdir -p "${RESULTS_DIR}"
 echo -e "${CYAN}"
 cat << "EOF"
 ╔══════════════════════════════════════════════════════════════════╗
-║              ACADEMIC PERFORMANCE TEST SUITE                     ║
+║              PERFORMANCE TEST SUITE                     ║
 ║     Comprehensive Sync vs Async Microservices Analysis          ║
 ╚══════════════════════════════════════════════════════════════════╝
 EOF
@@ -206,7 +206,7 @@ case $PHASE in
         ;;
 
     standard)
-        echo -e "${GREEN}Running STANDARD academic suite (12-14 hours)${NC}\n"
+        echo -e "${GREEN}Running STANDARD suite (12-14 hours)${NC}\n"
         NUM_RUNS=3
         run_test_suite "baseline" "${TESTS[baseline]}"
         run_test_suite "light" "${TESTS[light]}"
@@ -252,7 +252,7 @@ echo -e "${CYAN}╚════════════════════�
 
 echo -e "${GREEN}Results saved in: ${RESULTS_DIR}${NC}\n"
 echo -e "${YELLOW}To analyze results, run:${NC}"
-echo -e "${BLUE}  python3 analyze-academic-results.py ${RESULTS_DIR}${NC}\n"
+echo -e "${BLUE}  python3 analyze-results.py ${RESULTS_DIR}${NC}\n"
 
 # Save test metadata
 cat > "${RESULTS_DIR}/test_metadata.json" << EOF
